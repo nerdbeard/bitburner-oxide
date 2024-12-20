@@ -22,12 +22,16 @@ pub fn handle_event(event: &Event) -> Result<()> {
             write_file_to_server(&build_bitburner_request(source, true)?)?;
         }
         EventKind::Modify(_) => {
-            let destination = event.paths.get(1).unwrap_or_else(|| {
+            let destination = event.paths.last().unwrap_or_else(|| {
                 panic!("unable to get destination file for event: {:#?}", event)
             });
-            info!("file {:#?} has been moved to {:#?}", &source, &destination);
             write_file_to_server(&build_bitburner_request(destination, true)?)?;
-            delete_file_from_server(&build_bitburner_request(source, false)?)?;
+            if source == destination {
+                info!("file {:#?} has been modified", &source);
+            } else {
+                info!("file {:#?} has been moved to {:#?}", &source, &destination);
+                delete_file_from_server(&build_bitburner_request(source, false)?)?;
+            }
         }
         EventKind::Remove(_) => {
             info!("file deleted: {:#?}", &event);
