@@ -1,23 +1,16 @@
 #[cfg(test)]
 use mockito;
 
-use anyhow::Result;
-use serde::Serialize;
 use crate::CONFIG;
-use reqwest::{
-    blocking::Response,
-    Error,
-};
-use log::{
-    info,
-    debug,
-    error,
-};
+use anyhow::Result;
+use log::{debug, error, info};
+use reqwest::{blocking::Response, Error};
+use serde::Serialize;
 
 pub fn delete_file_from_server(bitburner_request: &BitburnerRequest) -> Result<()> {
     match send_request(bitburner_request, reqwest::Method::DELETE) {
         Ok(res) => debug!("Response: {:#?}", res),
-        Err(e) => error!("Network error: {:#?}", e)
+        Err(e) => error!("Network error: {:#?}", e),
     }
     Ok(())
 }
@@ -25,12 +18,15 @@ pub fn delete_file_from_server(bitburner_request: &BitburnerRequest) -> Result<(
 pub fn write_file_to_server(bitburner_request: &BitburnerRequest) -> Result<()> {
     match send_request(bitburner_request, reqwest::Method::PUT) {
         Ok(res) => debug!("Response: {:#?}", res),
-        Err(e) => error!("Network error: {:#?}", e)
+        Err(e) => error!("Network error: {:#?}", e),
     }
     Ok(())
 }
 
-fn send_request(bitburner_request: &BitburnerRequest, method: reqwest::Method) -> Result<Response, Error> {
+fn send_request(
+    bitburner_request: &BitburnerRequest,
+    method: reqwest::Method,
+) -> Result<Response, Error> {
     #[cfg(not(test))]
     let url = format!("{}:{}", CONFIG.url, CONFIG.port);
     #[cfg(test)]
@@ -46,9 +42,10 @@ fn send_request(bitburner_request: &BitburnerRequest, method: reqwest::Method) -
         reqwest::Method::PUT => client.put(url),
         reqwest::Method::DELETE => client.delete(url),
         _ => client.get(url),
-    }.bearer_auth(token)
-     .body(body)
-     .send()
+    }
+    .bearer_auth(token)
+    .body(body)
+    .send()
 }
 
 #[derive(Debug, Serialize)]
@@ -56,4 +53,3 @@ pub struct BitburnerRequest {
     pub filename: String,
     pub code: Option<String>,
 }
-

@@ -4,34 +4,27 @@ extern crate clap;
 extern crate log;
 extern crate serde;
 
+pub mod app_args;
 pub mod bitburner;
 pub mod config;
-pub mod app_args;
 pub mod handler;
 
-use once_cell::sync::Lazy;
 use anyhow::Result;
-use env_logger::Env;
-use std::sync::mpsc::channel;
-use std::path::Path;
-use notify::{
-    RecursiveMode,
-    Watcher,
-    RecommendedWatcher,
-    Config as notify_config
-};
-use handler::handle_event;
 #[allow(unused_imports)]
-use config::{
-    Config,
-    get_config,
-    get_mock_config
-};
+use config::{get_config, get_mock_config, Config};
+use env_logger::Env;
+use handler::handle_event;
+use notify::{Config as notify_config, RecommendedWatcher, RecursiveMode, Watcher};
+use once_cell::sync::Lazy;
+use std::path::Path;
+use std::sync::mpsc::channel;
 
 #[cfg(not(test))]
-pub static CONFIG: Lazy<Config> = Lazy::new(|| { get_config().expect("Unable to initialize configuration") });
+pub static CONFIG: Lazy<Config> =
+    Lazy::new(|| get_config().expect("Unable to initialize configuration"));
 #[cfg(test)]
-pub static CONFIG: Lazy<Config> = Lazy::new(|| { get_mock_config().expect("Unable to initialize configuration") });
+pub static CONFIG: Lazy<Config> =
+    Lazy::new(|| get_mock_config().expect("Unable to initialize configuration"));
 
 fn main() -> Result<()> {
     let env = Env::default()
@@ -53,4 +46,3 @@ fn main() -> Result<()> {
     }
     Ok(())
 }
-

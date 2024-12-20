@@ -1,24 +1,11 @@
-use anyhow::{ Result, Context };
-use std::{
-    path::PathBuf,
-    fs,
-};
-use log::{
-    debug,
-    info,
-};
-use notify::event::{
-    Event,
-    EventKind,
-};
 use crate::{
+    bitburner::{delete_file_from_server, write_file_to_server, BitburnerRequest},
     CONFIG,
-    bitburner::{
-        BitburnerRequest,
-        write_file_to_server,
-        delete_file_from_server,
-    },
 };
+use anyhow::{Context, Result};
+use log::{debug, info};
+use notify::event::{Event, EventKind};
+use std::{fs, path::PathBuf};
 
 pub fn handle_event(event: &Event) -> Result<()> {
     if !event.clone().paths.into_iter().all(|it| is_valid_file(&it)) {
@@ -36,12 +23,12 @@ pub fn handle_event(event: &Event) -> Result<()> {
             info!("file {:#?} has been moved to {:#?}", &source, &destination);
             write_file_to_server(&build_bitburner_request(destination, true)?)?;
             delete_file_from_server(&build_bitburner_request(source, false)?)?;
-        },
+        }
         EventKind::Remove(_) => {
             info!("file deleted: {:#?}", &event);
             delete_file_from_server(&build_bitburner_request(&source, false)?)?;
-        },
-        unhandled_event => debug!("Unhandled event: {:#?}", unhandled_event)
+        }
+        unhandled_event => debug!("Unhandled event: {:#?}", unhandled_event),
     }
     Ok(())
 }
@@ -52,35 +39,25 @@ fn build_bitburner_request(path_buf: &PathBuf, include_code: bool) -> Result<Bit
     let include_code = false;
     let filename: String = extract_file_name(path_buf)?;
     let code: Option<String> = match include_code {
-        true => {
-            Some(
-                base64::encode(
-                    fs::read_to_string(
-                        path_buf.as_path()
-                    )
-                    .expect("Unable to extract file contents")
-                )
-            )
-        },
+        true => Some(base64::encode(
+            fs::read_to_string(path_buf.as_path()).expect("Unable to extract file contents"),
+        )),
         false => None,
     };
-    Ok(
-        BitburnerRequest {
-            filename,
-            code,
-        }
-    )
+    Ok(BitburnerRequest { filename, code })
 }
 
 fn extract_file_name(path_buf: &PathBuf) -> Result<String> {
-    path_buf.strip_prefix(&CONFIG.directory)
+    path_buf
+        .strip_prefix(&CONFIG.directory)
         .map(|path| path.to_str())?
         .map(|s| Ok(s.to_string()))
         .context("Unable to extract file name")?
 }
 
 fn is_valid_file(path_buf: &PathBuf) -> bool {
-    path_buf.extension()
+    path_buf
+        .extension()
         .map(|ex| ex.to_str().unwrap_or("").to_string())
         .map(|s| CONFIG.valid_extensions.contains(&s))
         .unwrap_or(false)
@@ -88,10 +65,10 @@ fn is_valid_file(path_buf: &PathBuf) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use super::*;
     use mockito::mock;
     use notify::event::{CreateKind, ModifyKind, RemoveKind};
-    use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn assert_path_prefix_is_stripped() {
@@ -118,8 +95,7 @@ mod tests {
             .with_body("written")
             .create();
         let kind = EventKind::Create(CreateKind::Any);
-        let event = Event::new(kind)
-            .add_path(PathBuf::from("/one/two/test.js"));
+        let event = Event::new(kind).add_path(PathBuf::from("/one/two/test.js"));
         assert!(handle_event(&event).is_ok());
     }
 
@@ -147,8 +123,7 @@ mod tests {
             .with_body("deleted")
             .create();
         let kind = EventKind::Remove(RemoveKind::Any);
-        let event = Event::new(kind)
-            .add_path(PathBuf::from("/one/two/test.js"));
+        let event = Event::new(kind).add_path(PathBuf::from("/one/two/test.js"));
         assert!(handle_event(&event).is_ok());
     }
 }
