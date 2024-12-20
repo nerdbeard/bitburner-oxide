@@ -5,28 +5,33 @@ use crate::{
 use anyhow::{Context, Result};
 use log::{debug, info};
 use notify::event::{Event, EventKind};
-use std::{fs, path::PathBuf};
+use std::{fs, path::Path};
 
 pub fn handle_event(event: &Event) -> Result<()> {
     if !event.clone().paths.into_iter().all(|it| is_valid_file(&it)) {
         debug!("ignoring event: {:#?}", &event);
         return Ok(());
     }
-    let source = event.paths.get(0).expect(&format!("unable to get source file for event: {:#?}", event));
+    let source = event
+        .paths
+        .first()
+        .unwrap_or_else(|| panic!("unable to get source file for event: {:#?}", event));
     match &event.kind {
         EventKind::Create(_) => {
             info!("file created: {:#?}", &event);
-            write_file_to_server(&build_bitburner_request(&source, true)?)?;
-        },
+            write_file_to_server(&build_bitburner_request(source, true)?)?;
+        }
         EventKind::Modify(_) => {
-            let destination = event.paths.get(1).expect(&format!("unable to get destination file for event: {:#?}", event));
+            let destination = event.paths.get(1).unwrap_or_else(|| {
+                panic!("unable to get destination file for event: {:#?}", event)
+            });
             info!("file {:#?} has been moved to {:#?}", &source, &destination);
             write_file_to_server(&build_bitburner_request(destination, true)?)?;
             delete_file_from_server(&build_bitburner_request(source, false)?)?;
         }
         EventKind::Remove(_) => {
             info!("file deleted: {:#?}", &event);
-            delete_file_from_server(&build_bitburner_request(&source, false)?)?;
+            delete_file_from_server(&build_bitburner_request(source, false)?)?;
         }
         unhandled_event => debug!("Unhandled event: {:#?}", unhandled_event),
     }
@@ -34,20 +39,20 @@ pub fn handle_event(event: &Event) -> Result<()> {
 }
 
 #[allow(unused_variables)]
-fn build_bitburner_request(path_buf: &PathBuf, include_code: bool) -> Result<BitburnerRequest> {
+fn build_bitburner_request(path: &Path, include_code: bool) -> Result<BitburnerRequest> {
     #[cfg(test)]
     let include_code = false;
-    let filename: String = extract_file_name(path_buf)?;
+    let filename: String = extract_file_name(path)?;
     let code: Option<String> = match include_code {
         true => Some(base64::encode(
-            fs::read_to_string(path_buf.as_path()).expect("Unable to extract file contents"),
+            fs::read_to_string(path).expect("Unable to extract file contents"),
         )),
         false => None,
     };
     Ok(BitburnerRequest { filename, code })
 }
 
-fn extract_file_name(path_buf: &PathBuf) -> Result<String> {
+fn extract_file_name(path_buf: &Path) -> Result<String> {
     path_buf
         .strip_prefix(&CONFIG.directory)
         .map(|path| path.to_str())?
@@ -55,7 +60,7 @@ fn extract_file_name(path_buf: &PathBuf) -> Result<String> {
         .context("Unable to extract file name")?
 }
 
-fn is_valid_file(path_buf: &PathBuf) -> bool {
+fn is_valid_file(path_buf: &Path) -> bool {
     path_buf
         .extension()
         .map(|ex| ex.to_str().unwrap_or("").to_string())
@@ -80,12 +85,12 @@ mod tests {
 
     #[test]
     fn assert_valid_file() {
-        assert_eq!(is_valid_file(&PathBuf::from("test.js")), true);
+        assert!(is_valid_file(&PathBuf::from("test.js")));
     }
 
     #[test]
     fn assert_invalid_file() {
-        assert_eq!(is_valid_file(&PathBuf::from("test.kt")), false);
+        assert!(!is_valid_file(&PathBuf::from("test.kt")));
     }
 
     #[test]

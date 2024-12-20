@@ -7,7 +7,7 @@ use std::{fs, path::Path};
 pub fn get_config() -> Result<Config> {
     let args = AppArgs::parse();
     let directory = match args.directory {
-        Some(val) => String::from(val),
+        Some(val) => val,
         None => String::from(std::env::current_dir().unwrap().to_str().unwrap()),
     };
     let token_path = String::from(Path::new(&directory).join("token").to_str().unwrap());
@@ -25,8 +25,8 @@ pub fn get_config() -> Result<Config> {
         },
     };
     Ok(Config {
-        bearer_token: String::from(token),
-        directory: directory,
+        bearer_token: token,
+        directory,
         ..Default::default()
     })
 }

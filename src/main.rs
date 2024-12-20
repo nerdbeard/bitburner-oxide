@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     info!("{:#?}", &config);
     let (sender, receiver) = channel();
     let mut watcher = RecommendedWatcher::new(sender, notify_config::default())?;
-    watcher.watch(&Path::new(&config.directory), RecursiveMode::Recursive)?;
+    watcher.watch(Path::new(&config.directory), RecursiveMode::Recursive)?;
     for result in receiver {
         match result {
             Ok(event) => handle_event(&event)?,
