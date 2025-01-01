@@ -48,9 +48,7 @@ fn build_bitburner_request(path: &Path, include_code: bool) -> Result<BitburnerR
     let include_code = false;
     let filename: String = extract_file_name(path)?;
     let code: Option<String> = match include_code {
-        true => Some(base64::encode(
-            fs::read_to_string(path).expect("Unable to extract file contents"),
-        )),
+        true => Some(base64::encode(fs::read_to_string(path).unwrap_or_default())),
         false => None,
     };
     Ok(BitburnerRequest { filename, code })
