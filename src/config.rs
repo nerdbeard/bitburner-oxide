@@ -58,6 +58,7 @@ impl Default for Config {
                 "js".to_string(),
                 "ns".to_string(),
                 "txt".to_string(),
+                "ts".to_string(),
             ],
             directory: String::from(""),
         }
